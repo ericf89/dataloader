@@ -9,9 +9,12 @@
  */
 
 // A Function, which when given an Array of keys, returns a Promise of an Array
-// of values or Errors.
-export type BatchLoadFn<K, V> =
-  (keys: $ReadOnlyArray<K>) => Promise<$ReadOnlyArray<V | Error>>;
+// of values or Errors. (Also receives the any context provided to the loader
+// at construction)
+export type BatchLoadFn<K, V> = (
+  keys: $ReadOnlyArray<K>,
+  context?: any
+) => Promise<$ReadOnlyArray<V | Error>>;
 
 // Optionally turn off batching or caching or provide a cache key function or a
 // custom cache instance.
@@ -21,6 +24,7 @@ export type Options<K, V> = {
   cache?: boolean;
   cacheKeyFn?: (key: any) => any;
   cacheMap?: CacheMap<K, Promise<V>>;
+  context?: any;
 };
 
 // If a custom cache is provided, it must be of this type (a subset of ES6 Map).
@@ -54,6 +58,7 @@ class DataLoader<K, V> {
     }
     this._batchLoadFn = batchLoadFn;
     this._options = options;
+    this._context = options && options.context;
     this._promiseCache = getValidCacheMap(options);
     this._queue = [];
   }
@@ -63,6 +68,7 @@ class DataLoader<K, V> {
   _options: ?Options<K, V>;
   _promiseCache: CacheMap<K, Promise<V>>;
   _queue: LoaderQueue<K, V>;
+  _context: any;
 
   /**
    * Loads a key, returning a `Promise` for the value represented by that key.
@@ -254,7 +260,7 @@ function dispatchQueueBatch<K, V>(
 
   // Call the provided batchLoadFn for this loader with the loader queue's keys.
   var batchLoadFn = loader._batchLoadFn;
-  var batchPromise = batchLoadFn(keys);
+  var batchPromise = batchLoadFn(keys, loader._context);
 
   // Assert the expected response from batchLoadFn
   if (!batchPromise || typeof batchPromise.then !== 'function') {

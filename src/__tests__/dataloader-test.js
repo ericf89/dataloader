@@ -714,6 +714,24 @@ describe('Accepts options', () => {
       expect(Object.keys(aCustomMap.stash)).to.deep.equal([]);
     });
 
+    it('Accepts an optional context to use while loading', async () => {
+      const calls = [];
+      var identityLoader = new DataLoader(
+        (keys, ctx) => {
+          calls.push([ keys, ctx ]);
+          return Promise.resolve(keys);
+        },
+        { context: { some: 'context' } }
+      );
+
+      var promise1 = identityLoader.load(1);
+      expect(promise1).to.be.instanceof(Promise);
+
+      var value1 = await promise1;
+      expect(value1).to.equal(1);
+
+      expect(calls[0]).to.deep.equal([ [ 1 ], { some: 'context' } ]);
+    });
   });
 
 });
